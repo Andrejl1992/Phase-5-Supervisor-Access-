@@ -1,0 +1,115 @@
+import os
+import json
+import datetime
+
+# -----------------------------
+# PHASE 5: Supervisor-Only Evidence Removal
+# -----------------------------
+# What this script does:
+# - Only supervisors can remove evidence files
+# - A reason must be provided for every removal
+# - Every removal is saved into removal_log.json for record-keeping
+# -----------------------------
+
+REMOVAL_LOG = "removal_log.json"  # File where removal records will be stored
+
+
+# -----------------------------
+# Load past removal records
+# -----------------------------
+def load_removal_logs():
+    """
+    Load previous removal records from removal_log.json.
+    If the file does not exist, return an empty list.
+    """
+    if os.path.exists(REMOVAL_LOG):
+        with open(REMOVAL_LOG, "r") as f:
+            return json.load(f)
+    return []
+
+
+# -----------------------------
+# Save updated removal records
+# -----------------------------
+def save_removal_logs(logs):
+    """
+    Save the current list of removal records back into removal_log.json.
+    """
+    with open(REMOVAL_LOG, "w") as f:
+        json.dump(logs, f, indent=4)
+
+
+# -----------------------------
+# Record a new removal action
+# -----------------------------
+def log_removal(username, file_path, reason):
+    """
+    Add a new removal record with the date, time, user, file removed, and reason.
+    """
+    logs = load_removal_logs()  # Load existing records
+    now = datetime.datetime.now()  # Get current date and time
+
+    # Create a single log entry
+    entry = {
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M:%S"),
+        "user": username,
+        "file_removed": file_path,
+        "reason": reason
+    }
+
+    # Add this entry to the list and save it
+    logs.append(entry)
+    save_removal_logs(logs)
+
+    print(f"Removal logged: {file_path} by {username} | Reason: {reason}")
+
+
+# -----------------------------
+# Main function to remove evidence
+# -----------------------------
+def remove_evidence(username, role, file_path):
+    """
+    Only supervisors can remove evidence files.
+    A reason must be provided, and the action is logged.
+    """
+    # Step 1: Check if user is a supervisor
+    if role.lower() != "supervisor":
+        print("Access denied: Only supervisors can remove evidence.")
+        return False
+
+    # Step 2: Check if the file exists
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        return False
+
+    # Step 3: Ask for a reason before removal
+    reason = input("Enter reason for removal: ").strip()
+    if not reason:
+        print("Removal cancelled: A reason is required.")
+        return False
+
+    # Step 4: Try to remove the file and log the action
+    try:
+        os.remove(file_path)  # Delete the file
+        log_removal(username, file_path, reason)  # Record the action
+        print(f"Evidence removed: {file_path}")
+        return True
+    except Exception as e:
+        print(f"Error: Could not remove file. {e}")
+        return False
+
+
+# -----------------------------
+# Example run (for testing only)
+# -----------------------------
+if __name__ == "__main__":
+    # Example supervisor account
+    user = "srogers"
+    role = "supervisor"
+
+    # Example evidence file (replace this with a real file to test)
+    test_file = "test_case/evidence/sample.txt"
+
+    # Run the removal function
+    remove_evidence(user, role, test_file)
